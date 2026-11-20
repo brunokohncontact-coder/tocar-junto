@@ -60,6 +60,10 @@ label.vol input{flex:1}
 #bats small{color:var(--apagado); font-size:13px; margin-left:6px}
 #tempo{margin-left:auto; color:var(--apagado); font-size:13px}
 #parar{padding:12px; font-size:15px}
+body.soguia #palco{background:var(--cobalto)}
+body.soguia #agoraNome{font-size:64px !important}
+body.soguia #topo{position:absolute; top:28%; background:transparent; padding:0 20px; flex-direction:column}
+body.soguia #agoraDes svg{transform:scale(1.6); transform-origin:left top; margin-bottom:90px}
 #rec{position:absolute; left:74px; top:calc(env(safe-area-inset-top) + 9px); width:14px; height:14px;
   border-radius:50%; background:var(--rosa); display:none; z-index:3}
 #aviso{position:absolute; left:0; right:0; top:42%; text-align:center; font-size:22px; font-weight:800; padding:0 24px;
@@ -109,10 +113,19 @@ label.vol input{flex:1}
     <label class="vol">Volume do guia <input type="range" id="vol" min="0" max="1" step="0.05" value="0.8"></label>
   </div>
 
-  <button id="btnGravar" disabled>Gravar</button>
+  <div class="passo">
+    <h2 class="caps">4. Até onde</h2>
+    <div class="linha">
+      <button id="btnEstrofe">Só a estrofe</button>
+      <button id="btnTudo" class="sec">Até o B7</button>
+    </div>
+    <p style="margin:12px 0 0">A estrofe para no Am6 (0:42,6 da animação), uns 50 s de guia. "Até o B7" vai até 1:19,6.</p>
+  </div>
+
+  <button id="btnGravar" disabled>Gravar com este celular</button>
   <div style="height:10px"></div>
-  <button id="btnEnsaiar" class="sec" disabled>Só ensaiar (sem gravar)</button>
-  <p class="sub" style="margin-top:16px">Aos 1,5 s a tela pisca: bata uma palma de verdade, perto do celular. Ela sincroniza o vídeo com a animação.</p>
+  <button id="btnEnsaiar" class="sec" disabled>Só o guia (gravar em outro aparelho)</button>
+  <p class="sub" style="margin-top:16px">Aos 1,5 s a tela pisca: bata uma palma de verdade. Todo aparelho que estiver gravando (câmera, celular, microfone do estúdio) tem que ouvir essa palma: é ela que junta tudo na edição.<br><br>"Só o guia" não liga a câmera nem o microfone deste celular: serve para ensaiar ou para gravar a imagem em outro celular e o som no estúdio (XLR).</p>
 </section>
 
 <!-- ============ PALCO ============ -->
@@ -187,6 +200,14 @@ async function prepararAudio(){
 }
 $("vol").oninput=()=>{ if(ganho) ganho.gain.value=parseFloat($("vol").value); };
 
+/* ---------- até onde ---------- */
+const FIM_ESTROFE = DADOS.anim_comeca + 42.6, FIM_TUDO = DADOS.anim_comeca + 79.6;
+let fimGuia = FIM_ESTROFE;
+function escolheFim(estrofe){ fimGuia = estrofe ? FIM_ESTROFE : FIM_TUDO;
+  $("btnEstrofe").className = estrofe?"":"sec"; $("btnTudo").className = estrofe?"sec":""; }
+$("btnEstrofe").onclick=()=>escolheFim(true);
+$("btnTudo").onclick=()=>escolheFim(false);
+
 /* ---------- câmera e microfone ---------- */
 let stream=null, frente=true;
 async function ligarCam(fr){
@@ -233,10 +254,15 @@ function tipoRec(){ for(const t of ["video/mp4","video/webm;codecs=vp9,opus","vi
 async function comecar(comGravacao){
   try{ await prepararAudio(); }
   catch(e){ $("audioErro").textContent="Não consegui abrir esse áudio. Use o guia_tocar_junto_audio.m4a."; $("audioErro").hidden=false; return; }
+  ultimoComGravacao = comGravacao;
+  $("btnDeNovo").textContent = comGravacao ? "Gravar de novo" : "Tocar o guia de novo";
   gravando = comGravacao && !!stream;
   partes=[];
   $("prep").style.display="none"; $("fim").style.display="none"; $("palco").style.display="block";
-  $("cam").style.visibility = stream ? "visible" : "hidden"; moldura();
+  const comCam = gravando;
+  $("cam").style.visibility = comCam ? "visible" : "hidden";
+  document.body.classList.toggle("soguia", !comCam);
+  if(comCam) moldura(); else $("quadro").style.display="none";
   if(navigator.wakeLock) navigator.wakeLock.request("screen").then(w=>wake=w).catch(()=>{});
   if(gravando){
     mime=tipoRec();
@@ -277,7 +303,10 @@ async function terminar(chegouAoFim){
       `O quadro 0 da animação vai <b>7,2 s depois da palma</b>. Use a palma no som da câmera, que é exata; o número aqui é só pra achar rápido.`;
     $("btnSalvar").hidden=false;
   }else{
-    $("fimTit").textContent="Ensaio terminado"; $("fimTxt").textContent=""; $("btnSalvar").hidden=true;
+    $("fimTit").textContent = chegouAoFim ? "Fim do guia" : "Parou antes do fim";
+    $("fimTxt").innerHTML = "Se gravou em outro aparelho: na edição, alinhe a palma no som de cada gravação (câmera e estúdio). "+
+      "O quadro 0 da animação vai <b>7,2 s depois da palma</b>.";
+    $("btnSalvar").hidden=true;
   }
 }
 let ultimo=null;
@@ -290,7 +319,8 @@ $("btnSalvar").onclick=async()=>{
   catch(e){ if(e&&e.name==="AbortError") return; }
   const a=document.createElement("a"); a.href=URL.createObjectURL(f); a.download=nome; document.body.append(a); a.click(); a.remove();
 };
-$("btnDeNovo").onclick=()=>comecar(true);
+let ultimoComGravacao=true;
+$("btnDeNovo").onclick=()=>comecar(ultimoComGravacao);
 $("btnVoltar").onclick=()=>{ $("fim").style.display="none"; $("prep").style.display="block"; };
 
 /* ---------- desenho do acorde (6ª corda à esquerda) ---------- */
@@ -335,7 +365,7 @@ function quadro(){
   }
   let inx=-1; for(let i=0;i<AC.length;i++) if(AC[i].i>t+1e-6){ inx=i; break; }
   if(inx!==ultDepois){ ultDepois=inx;
-    if(inx>=0 && AC[inx].i<DADOS.fim){ const b=AC[inx], n=NIV[b.niv]||NIV.meio;
+    if(inx>=0 && AC[inx].i<fimGuia){ const b=AC[inx], n=NIV[b.niv]||NIV.meio;
       $("depoisNome").textContent=b.nome; $("depoisNome").style.color=n[1]; }
     else $("depoisNome").textContent="fim";
   }
@@ -353,7 +383,7 @@ function quadro(){
   $("comp").textContent = ult ? "compasso "+ult[1] : "";
   const tg=Math.max(0,t-DADOS.musica+DADOS.gravacao_inicio), m=Math.floor(tg/60), s=(tg%60).toFixed(1).padStart(4,"0");
   $("tempo").textContent=`gravação ${m}:${s.replace(".",",")}`;
-  if(t>DADOS.fim+0.6){ terminar(true); return; }
+  if(t>fimGuia+0.6){ terminar(true); return; }
   requestAnimationFrame(quadro);
 }
 document.addEventListener("visibilitychange",()=>{ if(!document.hidden&&rodando&&navigator.wakeLock) navigator.wakeLock.request("screen").then(w=>wake=w).catch(()=>{}); });
