@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Tocar junto</title>
+<style>
+:root{
+  --cobalto:#1400CC; --cobalto-esc:#0A0066; --ceu:#35A7E8; --amarelo:#FFB416; --rosa:#F13056;
+  --branco:#FFFFFF; --apagado:#968CEB;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+html,body{margin:0; height:100%; background:#000; color:var(--branco);
+  font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif; overflow:hidden}
+button{font:inherit; border:0; border-radius:14px; padding:16px 18px; font-weight:700; font-size:17px;
+  background:var(--branco); color:var(--cobalto); width:100%; cursor:pointer}
+button.sec{background:transparent; color:var(--branco); border:2px solid var(--apagado)}
+button:disabled{opacity:.45}
+.caps{text-transform:uppercase; letter-spacing:.06em}
+
+/* tela de preparação */
+#prep{position:fixed; inset:0; background:var(--cobalto); overflow-y:auto; z-index:20;
+  padding:calc(env(safe-area-inset-top) + 22px) 20px calc(env(safe-area-inset-bottom) + 24px)}
+#prep h1{font-size:26px; line-height:1.15; margin:0 0 6px; font-weight:800}
+#prep .sub{color:var(--apagado); margin:0 0 22px; font-size:15px}
+.passo{background:var(--cobalto-esc); border-radius:16px; padding:16px; margin-bottom:14px}
+.passo h2{font-size:14px; margin:0 0 8px; color:var(--apagado)}
+.passo p{margin:0 0 12px; font-size:15px; line-height:1.4}
+.ok{color:var(--ceu); font-weight:700}
+.erro{color:#fff; background:var(--rosa); border-radius:10px; padding:10px 12px; font-size:14px; margin-top:10px}
+.linha{display:flex; gap:10px}
+.linha button{flex:1}
+label.vol{display:flex; align-items:center; gap:12px; font-size:15px}
+label.vol input{flex:1}
+#arquivo{display:none}
+
+/* tela de gravação */
+#palco{position:fixed; inset:0; display:none}
+#cam{position:absolute; inset:0; width:100%; height:100%; object-fit:contain; background:#000}
+#cam.espelho{transform:scaleX(-1)}
+#quadro{position:absolute; border:2px dashed rgba(255,255,255,.8); pointer-events:none; display:none}
+#quadro span{position:absolute; left:6px; bottom:4px; font-size:11px; color:rgba(255,255,255,.85)}
+#topo{position:absolute; left:0; right:0; top:0; padding:calc(env(safe-area-inset-top) + 8px) 14px 10px;
+  background:rgba(20,0,204,.82); display:flex; gap:10px; align-items:flex-start}
+#topo .txt{flex:1; min-width:0}
+.rot{font-size:12px; font-weight:800; color:var(--apagado); letter-spacing:.08em}
+#agoraNome{font-size:44px; font-weight:800; line-height:1.05; margin:2px 0 4px; white-space:nowrap}
+#agoraFunc{font-size:16px; line-height:1.25}
+.tag{display:inline-block; margin-top:6px; padding:3px 8px; border-radius:6px; font-size:12px; font-weight:800; letter-spacing:.06em}
+#agoraDes svg{display:block}
+#baixo{position:absolute; left:0; right:0; bottom:0; padding:10px 14px calc(env(safe-area-inset-bottom) + 10px);
+  background:rgba(20,0,204,.82)}
+#baixo .lin{display:flex; align-items:center; gap:12px}
+#depoisNome{font-size:26px; font-weight:800}
+#troca{margin-left:auto; font-size:22px; font-weight:800}
+#bats{display:flex; gap:8px; align-items:center; margin:8px 0 8px}
+#bats i{width:16px; height:16px; border-radius:50%; border:2px solid #fff; display:block}
+#bats i.on{background:#fff}
+#bats small{color:var(--apagado); font-size:13px; margin-left:6px}
+#tempo{margin-left:auto; color:var(--apagado); font-size:13px}
+#parar{padding:12px; font-size:15px}
+#rec{position:absolute; left:74px; top:calc(env(safe-area-inset-top) + 9px); width:14px; height:14px;
+  border-radius:50%; background:var(--rosa); display:none; z-index:3}
+#aviso{position:absolute; left:0; right:0; top:42%; text-align:center; font-size:22px; font-weight:800; padding:0 24px;
+  text-shadow:0 2px 8px rgba(0,0,0,.6)}
+#conta{position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:150px; height:150px; border-radius:24px;
+  background:#fff; color:var(--cobalto); font-size:110px; font-weight:800; display:none; align-items:center; justify-content:center}
+#flash{position:fixed; inset:0; background:#fff; color:var(--cobalto); display:none; align-items:center; justify-content:center;
+  font-size:64px; font-weight:900; z-index:10}
+
+/* fim */
+#fim{position:fixed; inset:0; background:var(--cobalto); display:none; z-index:15; overflow-y:auto;
+  padding:calc(env(safe-area-inset-top) + 28px) 20px calc(env(safe-area-inset-bottom) + 24px)}
+#fim h1{font-size:26px; margin:0 0 10px}
+#fim p{font-size:15px; line-height:1.45}
+#fim button{margin-bottom:12px}
+</style>
+</head>
+<body>
+
+<!-- ============ PREPARAÇÃO ============ -->
+<section id="prep">
+  <h1>Tocar junto<br>Eu hoje acordei com a luz do sol</h1>
+  <p class="sub">Hareton Salvanini, 1973. Original em lá 440.</p>
+
+  <div class="passo">
+    <h2 class="caps">1. O áudio do guia</h2>
+    <p id="audioInfo">Escolha o arquivo <b>guia_tocar_junto_audio.m4a</b> (está no Drive, pasta Trajetoria). Só precisa fazer isso uma vez: o celular guarda.</p>
+    <button id="btnArquivo">Escolher o áudio</button>
+    <input type="file" id="arquivo" accept="audio/*,.m4a,.mp3,.wav">
+    <div id="audioErro" class="erro" hidden></div>
+  </div>
+
+  <div class="passo">
+    <h2 class="caps">2. Câmera e microfone</h2>
+    <p>Grava a imagem e o som do celular (seu violão e sua voz). A música do guia toca só no fone.</p>
+    <div class="linha">
+      <button id="btnFrente">Câmera da frente</button>
+      <button id="btnTras" class="sec">De trás</button>
+    </div>
+    <p id="camInfo" style="margin:12px 0 0"></p>
+    <div id="camErro" class="erro" hidden></div>
+  </div>
+
+  <div class="passo">
+    <h2 class="caps">3. Fone</h2>
+    <p><b>Fone com fio.</b> Fone Bluetooth atrasa a música e, no iPhone, o microfone passa a ser o do fone: o violão some do vídeo.</p>
+    <label class="vol">Volume do guia <input type="range" id="vol" min="0" max="1" step="0.05" value="0.8"></label>
+  </div>
+
+  <button id="btnGravar" disabled>Gravar</button>
+  <div style="height:10px"></div>
+  <button id="btnEnsaiar" class="sec" disabled>Só ensaiar (sem gravar)</button>
+  <p class="sub" style="margin-top:16px">Aos 1,5 s a tela pisca: bata uma palma de verdade, perto do celular. Ela sincroniza o vídeo com a animação.</p>
+</section>
+
+<!-- ============ PALCO ============ -->
+<section id="palco">
+  <video id="cam" autoplay playsinline muted></video>
+  <div id="quadro"><span>o que entra no Reels (dá pra ajustar na edição)</span></div>
+  <div id="rec"></div>
+  <div id="topo">
+    <div class="txt">
+      <div class="rot">AGORA</div>
+      <div id="agoraNome">&nbsp;</div>
+      <div id="agoraFunc"></div>
+      <span id="agoraTag" class="tag"></span>
+    </div>
+    <div id="agoraDes"></div>
+  </div>
+  <div id="aviso"></div>
+  <div id="conta"></div>
+  <div id="baixo">
+    <div class="lin"><span class="rot">DEPOIS</span><span id="depoisNome"></span><span id="troca"></span></div>
+    <div id="bats"><i></i><i></i><i></i><i></i><small id="comp"></small><span id="tempo"></span></div>
+    <button id="parar" class="sec">Parar</button>
+  </div>
+</section>
+<div id="flash">PALMA!</div>
+
+<!-- ============ FIM ============ -->
+<section id="fim">
+  <h1 id="fimTit">Pronto</h1>
+  <p id="fimTxt"></p>
+  <button id="btnSalvar" hidden>Salvar o vídeo</button>
+  <button id="btnDeNovo" class="sec">Gravar de novo</button>
+  <button id="btnVoltar" class="sec">Voltar ao início</button>
+</section>
+
+<script src="dados.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const NIV = {repouso:["REPOUSO","#35A7E8","#0A0066"], meio:["MOVIMENTO","#FFB416","#0A0066"], tensao:["TENSÃO","#F13056","#FFFFFF"]};
+
+/* ---------- áudio do guia: guardado no celular (IndexedDB) ---------- */
+let ctx=null, buffer=null, arqBytes=null, ganho=null;
+function idb(){ return new Promise((res,rej)=>{ const r=indexedDB.open("tocar-junto",1);
+  r.onupgradeneeded=()=>r.result.createObjectStore("a"); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
+async function guardar(bytes,nome){ try{ const db=await idb(); const tx=db.transaction("a","readwrite");
+  tx.objectStore("a").put({bytes,nome},"guia"); }catch(e){} }
+async function lerGuardado(){ try{ const db=await idb(); return await new Promise(res=>{
+  const r=db.transaction("a").objectStore("a").get("guia"); r.onsuccess=()=>res(r.result||null); r.onerror=()=>res(null); }); }catch(e){ return null; } }
+
+function okAudio(nome){
+  $("audioInfo").innerHTML = `<span class="ok">Áudio pronto:</span> ${nome}`;
+  $("btnArquivo").textContent="Trocar o áudio"; $("btnArquivo").className="sec";
+  atualizaBotoes();
+}
+$("btnArquivo").onclick=()=>$("arquivo").click();
+$("arquivo").onchange=async e=>{
+  const f=e.target.files[0]; if(!f) return;
+  $("audioErro").hidden=true;
+  arqBytes=await f.arrayBuffer(); buffer=null;
+  await guardar(arqBytes.slice(0), f.name);
+  okAudio(f.name);
+};
+(async()=>{ const g=await lerGuardado(); if(g&&g.bytes){ arqBytes=g.bytes; okAudio(g.nome||"guia"); } })();
+
+async function prepararAudio(){
+  if(!ctx){ ctx=new (window.AudioContext||window.webkitAudioContext)(); ganho=ctx.createGain(); ganho.connect(ctx.destination); }
+  if(ctx.state!=="running") await ctx.resume();
+  ganho.gain.value=parseFloat($("vol").value);
+  if(!buffer){
+    buffer = await new Promise((res,rej)=>ctx.decodeAudioData(arqBytes.slice(0),res,rej));
+  }
+}
+$("vol").oninput=()=>{ if(ganho) ganho.gain.value=parseFloat($("vol").value); };
+
+/* ---------- câmera e microfone ---------- */
+let stream=null, frente=true;
+async function ligarCam(fr){
+  frente=fr; $("camErro").hidden=true;
+  $("btnFrente").className = fr?"":"sec"; $("btnTras").className = fr?"sec":"";
+  if(!window.isSecureContext||!navigator.mediaDevices){ $("camErro").textContent="Abra pelo endereço https://."; $("camErro").hidden=false; return; }
+  try{
+    if(stream) stream.getTracks().forEach(t=>t.stop());
+    stream = await navigator.mediaDevices.getUserMedia({
+      video:{facingMode: fr?"user":"environment", width:{ideal:1920}, height:{ideal:1080}, frameRate:{ideal:30}},
+      audio:{echoCancellation:false, noiseSuppression:false, autoGainControl:false}
+    });
+    const v=$("cam"); v.srcObject=stream; v.classList.toggle("espelho",fr); await v.play().catch(()=>{});
+    const s=stream.getVideoTracks()[0].getSettings();
+    $("camInfo").innerHTML=`<span class="ok">Câmera e microfone ligados.</span>`+(s.width?` ${s.width}×${s.height}`:"");
+  }catch(e){
+    stream=null;
+    $("camErro").textContent = e&&e.name==="NotAllowedError"
+      ? "O Safari bloqueou. Toque em aA na barra de endereço › Ajustes do Site › libere Câmera e Microfone, e recarregue."
+      : "Não consegui ligar ("+(e&&e.name||"erro")+"). Feche outros apps que usam a câmera.";
+    $("camErro").hidden=false;
+  }
+  atualizaBotoes();
+}
+$("btnFrente").onclick=()=>ligarCam(true);
+$("btnTras").onclick=()=>ligarCam(false);
+function atualizaBotoes(){ $("btnGravar").disabled=!(arqBytes&&stream); $("btnEnsaiar").disabled=!arqBytes; }
+
+/* moldura 1080×920 (a metade de baixo do Reels) sobre a imagem da câmera */
+function moldura(){
+  const v=$("cam"), q=$("quadro");
+  if(!v.videoWidth){ q.style.display="none"; return; }
+  const W=innerWidth, H=innerHeight, esc=Math.min(W/v.videoWidth, H/v.videoHeight);
+  const vw=v.videoWidth*esc, vh=v.videoHeight*esc, x0=(W-vw)/2, y0=(H-vh)/2;
+  const qh=Math.min(vh, vw*920/1080);
+  Object.assign(q.style,{display:"block", left:x0+"px", width:vw+"px", top:(y0+(vh-qh)/2)+"px", height:qh+"px"});
+}
+$("cam").addEventListener("loadedmetadata",moldura); addEventListener("resize",moldura);
+
+/* ---------- gravação ---------- */
+let rec=null, partes=[], mime="", recT0=0, audT0=0, rodando=false, gravando=false, src=null, wake=null, inicioData=null;
+function tipoRec(){ for(const t of ["video/mp4","video/webm;codecs=vp9,opus","video/webm"]) try{ if(MediaRecorder.isTypeSupported(t)) return t; }catch(e){} return ""; }
+
+async function comecar(comGravacao){
+  try{ await prepararAudio(); }
+  catch(e){ $("audioErro").textContent="Não consegui abrir esse áudio. Use o guia_tocar_junto_audio.m4a."; $("audioErro").hidden=false; return; }
+  gravando = comGravacao && !!stream;
+  partes=[];
+  $("prep").style.display="none"; $("fim").style.display="none"; $("palco").style.display="block";
+  $("cam").style.visibility = stream ? "visible" : "hidden"; moldura();
+  if(navigator.wakeLock) navigator.wakeLock.request("screen").then(w=>wake=w).catch(()=>{});
+  if(gravando){
+    mime=tipoRec();
+    try{ rec=new MediaRecorder(stream, mime?{mimeType:mime, videoBitsPerSecond:10000000, audioBitsPerSecond:192000}:{}); }
+    catch(e){ rec=new MediaRecorder(stream); }
+    rec.ondataavailable=e=>{ if(e.data&&e.data.size) partes.push(e.data); };
+    rec.start(1000); recT0=performance.now(); inicioData=new Date();
+    $("rec").style.display="block";
+  }
+  src=ctx.createBufferSource(); src.buffer=buffer; src.connect(ganho);
+  const quando=ctx.currentTime+0.8;
+  src.start(quando);
+  audT0 = performance.now() + (quando-ctx.currentTime)*1000;   // relógio da página em que o guia começa
+  src.onended=()=>{ if(rodando) terminar(true); };
+  rodando=true; requestAnimationFrame(quadro);
+}
+$("btnGravar").onclick=()=>comecar(true);
+$("btnEnsaiar").onclick=()=>comecar(false);
+$("parar").onclick=()=>terminar(false);
+
+async function terminar(chegouAoFim){
+  if(!rodando) return; rodando=false;
+  try{ src.onended=null; src.stop(); }catch(e){}
+  $("flash").style.display="none"; $("rec").style.display="none";
+  if(wake){ try{ wake.release(); }catch(e){} wake=null; }
+  let blob=null;
+  if(gravando&&rec&&rec.state!=="inactive"){
+    await new Promise(res=>{ rec.onstop=res; try{ rec.requestData(); }catch(e){} rec.stop(); });
+    blob=new Blob(partes,{type:(rec.mimeType||mime||"video/mp4").split(";")[0]});
+  }
+  $("palco").style.display="none"; $("fim").style.display="block";
+  ultimo=blob;
+  const atraso=(audT0-recT0)/1000;
+  if(blob){
+    $("fimTit").textContent = chegouAoFim ? "Gravado" : "Gravado (parou antes do fim)";
+    $("fimTxt").innerHTML = `Salve e mande pro computador (LocalSend).<br><br>`+
+      `<b>Na edição:</b> a sua palma fica perto de <b>${(atraso+DADOS.flash).toFixed(1).replace(".",",")} s</b> do vídeo. `+
+      `O quadro 0 da animação vai <b>7,2 s depois da palma</b>. Use a palma no som da câmera, que é exata; o número aqui é só pra achar rápido.`;
+    $("btnSalvar").hidden=false;
+  }else{
+    $("fimTit").textContent="Ensaio terminado"; $("fimTxt").textContent=""; $("btnSalvar").hidden=true;
+  }
+}
+let ultimo=null;
+$("btnSalvar").onclick=async()=>{
+  if(!ultimo) return;
+  const d=inicioData||new Date(), p=n=>String(n).padStart(2,"0");
+  const nome=`tocar_junto_${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}`+(ultimo.type.includes("webm")?".webm":".mp4");
+  const f=new File([ultimo],nome,{type:ultimo.type});
+  try{ if(navigator.canShare&&navigator.canShare({files:[f]})){ await navigator.share({files:[f]}); return; } }
+  catch(e){ if(e&&e.name==="AbortError") return; }
+  const a=document.createElement("a"); a.href=URL.createObjectURL(f); a.download=nome; document.body.append(a); a.click(); a.remove();
+};
+$("btnDeNovo").onclick=()=>comecar(true);
+$("btnVoltar").onclick=()=>{ $("fim").style.display="none"; $("prep").style.display="block"; };
+
+/* ---------- desenho do acorde (6ª corda à esquerda) ---------- */
+function desenho(forma, esc){
+  if(!forma) return `<div style="font-size:${15*esc}px;font-weight:700;line-height:1.2;width:${96*esc}px">só escuta</div>`;
+  const fr=[...forma].map(c=>c==="x"?null:+c), toc=fr.filter(f=>f), mx=toc.length?Math.max(...toc):0;
+  let base=1, lin=4;
+  if(mx<=4){ base=1; lin=4; } else if(fr.includes(0)){ base=1; lin=mx; } else { base=Math.min(...toc); lin=Math.max(4,mx-base+1); }
+  const cw=17*esc, ch=88*esc/lin, x0=16*esc, y0=20*esc, W=x0+5*cw+(base>1?34*esc:10*esc), H=y0+lin*ch+20*esc;
+  let s=`<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">`;
+  for(let i=0;i<6;i++) s+=`<line x1="${x0+i*cw}" y1="${y0}" x2="${x0+i*cw}" y2="${y0+lin*ch}" stroke="#fff" stroke-width="${1.5*esc}"/>`;
+  for(let r=0;r<=lin;r++) s+=`<line x1="${x0}" y1="${y0+r*ch}" x2="${x0+5*cw}" y2="${y0+r*ch}" stroke="#fff" stroke-width="${(r===0&&base===1?4:1.2)*esc}"/>`;
+  if(base>1) s+=`<text x="${x0+5*cw+5*esc}" y="${y0+0.7*ch}" fill="#fff" font-size="${11*esc}" font-weight="700">${base}ª</text>`;
+  fr.forEach((f,i)=>{ const cx=x0+i*cw;
+    if(f===null) s+=`<text x="${cx}" y="${y0-6*esc}" fill="#968CEB" font-size="${12*esc}" font-weight="700" text-anchor="middle">×</text>`;
+    else if(f===0) s+=`<circle cx="${cx}" cy="${y0-9*esc}" r="${4*esc}" fill="none" stroke="#fff" stroke-width="${1.5*esc}"/>`;
+    else s+=`<circle cx="${cx}" cy="${y0+(f-base+0.5)*ch}" r="${Math.min(6.5*esc,ch*0.34)}" fill="#fff"/>`; });
+  s+=`<text x="${x0}" y="${H-3*esc}" fill="#968CEB" font-size="${11*esc}" font-weight="700">${forma}</text></svg>`;
+  return s;
+}
+
+/* ---------- a cada quadro ---------- */
+const AC=DADOS.acordes, BT=DADOS.batidas;
+let ultAgora=-1, ultDepois=-1;
+function quadro(){
+  if(!rodando) return;
+  const t=(performance.now()-audT0)/1000;          // tempo do guia
+  $("flash").style.display = (t>=DADOS.flash && t<DADOS.flash+0.12) ? "flex" : "none";
+  const antes = t < DADOS.musica;
+  $("aviso").textContent = t<0 ? "" : antes ? "Bata uma palma quando a tela piscar" : "";
+  $("topo").style.visibility = $("baixo").firstElementChild.style.visibility = antes?"hidden":"visible";
+  $("bats").style.visibility = antes?"hidden":"visible";
+
+  let ia=-1; for(let i=0;i<AC.length;i++) if(AC[i].i<=t+1e-6 && t<AC[i].f){ ia=i; break; }
+  if(ia!==ultAgora){ ultAgora=ia;
+    if(ia>=0){ const a=AC[ia], n=NIV[a.niv]||NIV.meio;
+      $("agoraNome").textContent=a.nome; $("agoraNome").style.fontSize = a.nome.length>7?"34px":"44px";
+      $("agoraFunc").textContent=a.func;
+      const tg=$("agoraTag"); tg.textContent=n[0]; tg.style.background=n[1]; tg.style.color=n[2];
+      $("agoraDes").innerHTML=desenho(a.forma,1.15);
+    }
+  }
+  let inx=-1; for(let i=0;i<AC.length;i++) if(AC[i].i>t+1e-6){ inx=i; break; }
+  if(inx!==ultDepois){ ultDepois=inx;
+    if(inx>=0 && AC[inx].i<DADOS.fim){ const b=AC[inx], n=NIV[b.niv]||NIV.meio;
+      $("depoisNome").textContent=b.nome; $("depoisNome").style.color=n[1]; }
+    else $("depoisNome").textContent="fim";
+  }
+  // troca em N (batidas que faltam)
+  let troca="";
+  if(inx>=0 && t>=DADOS.anim_comeca-2){ const nb=BT.filter(b=>t+1e-6<b[0] && b[0]<=AC[inx].i+0.12).length; if(nb>0&&nb<=4) troca="troca em "+nb; }
+  $("troca").textContent=troca;
+  // contagem 4-3-2-1
+  let c=""; DADOS.contagem.forEach((ct,i)=>{ if(t>=ct-1e-6 && t<ct+0.5) c=String(4-i); });
+  $("conta").style.display=c?"flex":"none"; $("conta").textContent=c;
+  // tempos do compasso
+  let ult=null; for(const b of BT){ if(b[0]<=t+1e-6) ult=b; else break; }
+  const bolas=$("bats").querySelectorAll("i");
+  bolas.forEach((el,i)=>el.classList.toggle("on", !!ult && ult[2]===i+1));
+  $("comp").textContent = ult ? "compasso "+ult[1] : "";
+  const tg=Math.max(0,t-DADOS.musica+DADOS.gravacao_inicio), m=Math.floor(tg/60), s=(tg%60).toFixed(1).padStart(4,"0");
+  $("tempo").textContent=`gravação ${m}:${s.replace(".",",")}`;
+  if(t>DADOS.fim+0.6){ terminar(true); return; }
+  requestAnimationFrame(quadro);
+}
+document.addEventListener("visibilitychange",()=>{ if(!document.hidden&&rodando&&navigator.wakeLock) navigator.wakeLock.request("screen").then(w=>wake=w).catch(()=>{}); });
+</script>
+</body>
+</html>
