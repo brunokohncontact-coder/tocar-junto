@@ -52,8 +52,13 @@ label.vol input{flex:1}
 #baixo{position:absolute; left:0; right:0; bottom:0; padding:10px 14px calc(env(safe-area-inset-bottom) + 10px);
   background:rgba(20,0,204,.82)}
 #baixo .lin{display:flex; align-items:center; gap:12px}
-#depoisNome{font-size:26px; font-weight:800}
-#troca{margin-left:auto; font-size:22px; font-weight:800}
+#depoisNome{font-size:30px; font-weight:800; line-height:1.05}
+#depoisDes{flex:none}
+#fila{font-size:16px; color:var(--apagado); margin-top:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+#fila b{color:#fff; font-weight:700}
+body.soguia #baixo{padding-bottom:calc(env(safe-area-inset-bottom) + 18px)}
+body.soguia #depoisNome{font-size:44px}
+#troca{font-size:18px; font-weight:800; color:var(--amarelo)}
 #bats{display:flex; gap:8px; align-items:center; margin:8px 0 8px}
 #bats i{width:16px; height:16px; border-radius:50%; border:2px solid #fff; display:block}
 #bats i.on{background:#fff}
@@ -62,7 +67,7 @@ label.vol input{flex:1}
 #parar{padding:12px; font-size:15px}
 body.soguia #palco{background:var(--cobalto)}
 body.soguia #agoraNome{font-size:64px !important}
-body.soguia #topo{position:absolute; top:28%; background:transparent; padding:0 20px; flex-direction:column}
+body.soguia #topo{position:absolute; top:calc(env(safe-area-inset-top) + 9%); background:transparent; padding:0 20px; flex-direction:column}
 body.soguia #agoraDes svg{transform:scale(1.6); transform-origin:left top; margin-bottom:90px}
 #rec{position:absolute; left:74px; top:calc(env(safe-area-inset-top) + 9px); width:14px; height:14px;
   border-radius:50%; background:var(--rosa); display:none; z-index:3}
@@ -109,7 +114,7 @@ body.soguia #agoraDes svg{transform:scale(1.6); transform-origin:left top; margi
 
   <div class="passo">
     <h2 class="caps">3. Fone</h2>
-    <p><b>Fone com fio.</b> Fone Bluetooth atrasa a música e, no iPhone, o microfone passa a ser o do fone: o violão some do vídeo.</p>
+    <p><b>Gravando com este celular: fone com fio.</b> Com fone Bluetooth o iPhone passa a gravar pelo microfone do fone e a música vira som de ligação.</p><p><b>Fone Bluetooth só no "Só o guia"</b> (o som vai no condensador). O fone atrasa uns 0,2 s: bata a palma no 4º bipe que você OUVE, não no piscar da tela. Assim a palma e o violão atrasam juntos e a edição casa.</p>
     <label class="vol">Volume do guia <input type="range" id="vol" min="0" max="1" step="0.05" value="0.8"></label>
   </div>
 
@@ -125,7 +130,7 @@ body.soguia #agoraDes svg{transform:scale(1.6); transform-origin:left top; margi
   <button id="btnGravar" disabled>Gravar com este celular</button>
   <div style="height:10px"></div>
   <button id="btnEnsaiar" class="sec" disabled>Só o guia (gravar em outro aparelho)</button>
-  <p class="sub" style="margin-top:16px">Aos 1,5 s a tela pisca: bata uma palma de verdade. Todo aparelho que estiver gravando (câmera, celular, microfone do estúdio) tem que ouvir essa palma: é ela que junta tudo na edição.<br><br>"Só o guia" não liga a câmera nem o microfone deste celular: serve para ensaiar ou para gravar a imagem em outro celular e o som no estúdio (XLR).</p>
+  <p class="sub" style="margin-top:16px">No começo tocam 4 bipes no fone e a tela pisca no 4º: bata uma palma de verdade no 4º bipe. Todo aparelho que estiver gravando (câmera, celular, microfone do estúdio) tem que ouvir essa palma: é ela que junta tudo na edição.<br><br>"Só o guia" não liga a câmera nem o microfone deste celular: serve para ensaiar ou para gravar a imagem em outro celular e o som no estúdio (XLR).</p>
 </section>
 
 <!-- ============ PALCO ============ -->
@@ -145,7 +150,7 @@ body.soguia #agoraDes svg{transform:scale(1.6); transform-origin:left top; margi
   <div id="aviso"></div>
   <div id="conta"></div>
   <div id="baixo">
-    <div class="lin"><span class="rot">DEPOIS</span><span id="depoisNome"></span><span id="troca"></span></div>
+    <div class="lin"><div style="flex:1;min-width:0"><span class="rot">DEPOIS</span> <span id="troca" style="margin-left:8px"></span><div id="depoisNome"></div><div id="fila"></div></div><div id="depoisDes"></div></div>
     <div id="bats"><i></i><i></i><i></i><i></i><small id="comp"></small><span id="tempo"></span></div>
     <button id="parar" class="sec">Parar</button>
   </div>
@@ -252,6 +257,7 @@ let rec=null, partes=[], mime="", recT0=0, audT0=0, rodando=false, gravando=fals
 function tipoRec(){ for(const t of ["video/mp4","video/webm;codecs=vp9,opus","video/webm"]) try{ if(MediaRecorder.isTypeSupported(t)) return t; }catch(e){} return ""; }
 
 async function comecar(comGravacao){
+  ultAgora=-1; ultDepois=-1;
   try{ await prepararAudio(); }
   catch(e){ $("audioErro").textContent="Não consegui abrir esse áudio. Use o guia_tocar_junto_audio.m4a."; $("audioErro").hidden=false; return; }
   ultimoComGravacao = comGravacao;
@@ -275,6 +281,12 @@ async function comecar(comGravacao){
   src=ctx.createBufferSource(); src.buffer=buffer; src.connect(ganho);
   const quando=ctx.currentTime+0.8;
   src.start(quando);
+  // 4 bipes no fone: a palma vai no 4º (mesmo atraso do fone que o violão)
+  [DADOS.flash-1.5, DADOS.flash-1.0, DADOS.flash-0.5, DADOS.flash].forEach((tb,k)=>{
+    const o=ctx.createOscillator(), g=ctx.createGain(), t0=quando+tb;
+    o.frequency.value = k===3 ? 1320 : 880; o.connect(g); g.connect(ganho);
+    g.gain.setValueAtTime(0.0001,t0); g.gain.exponentialRampToValueAtTime(0.6,t0+0.005); g.gain.exponentialRampToValueAtTime(0.0001,t0+0.12);
+    o.start(t0); o.stop(t0+0.15); });
   audT0 = performance.now() + (quando-ctx.currentTime)*1000;   // relógio da página em que o guia começa
   src.onended=()=>{ if(rodando) terminar(true); };
   rodando=true; requestAnimationFrame(quadro);
@@ -350,7 +362,7 @@ function quadro(){
   const t=(performance.now()-audT0)/1000;          // tempo do guia
   $("flash").style.display = (t>=DADOS.flash && t<DADOS.flash+0.12) ? "flex" : "none";
   const antes = t < DADOS.musica;
-  $("aviso").textContent = t<0 ? "" : antes ? "Bata uma palma quando a tela piscar" : "";
+  $("aviso").textContent = t<0 ? "" : antes ? "Palma no 4º bipe" : "";
   $("topo").style.visibility = $("baixo").firstElementChild.style.visibility = antes?"hidden":"visible";
   $("bats").style.visibility = antes?"hidden":"visible";
 
@@ -366,8 +378,11 @@ function quadro(){
   let inx=-1; for(let i=0;i<AC.length;i++) if(AC[i].i>t+1e-6){ inx=i; break; }
   if(inx!==ultDepois){ ultDepois=inx;
     if(inx>=0 && AC[inx].i<fimGuia){ const b=AC[inx], n=NIV[b.niv]||NIV.meio;
-      $("depoisNome").textContent=b.nome; $("depoisNome").style.color=n[1]; }
-    else $("depoisNome").textContent="fim";
+      $("depoisNome").textContent=b.nome; $("depoisNome").style.color=n[1];
+      $("depoisDes").innerHTML = b.forma ? desenho(b.forma, document.body.classList.contains("soguia")?1.1:0.85) : "";
+      const prox=AC.slice(inx+1).filter(c=>c.i<fimGuia).slice(0,3).map(c=>c.nome);
+      $("fila").innerHTML = prox.length ? "e depois: <b>"+prox.join("</b> · <b>")+"</b>" : "e depois: fim"; }
+    else { $("depoisNome").textContent="fim"; $("depoisDes").innerHTML=""; $("fila").textContent=""; }
   }
   // troca em N (batidas que faltam)
   let troca="";
