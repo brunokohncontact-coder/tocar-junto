@@ -103,7 +103,8 @@ body.soguia #agoraDes svg{transform:scale(1.6); transform-origin:left top; margi
 
   <div class="passo">
     <h2 class="caps">2. Câmera e microfone</h2>
-    <p>Grava a imagem e o som do celular (seu violão e sua voz). A música do guia toca só no fone.</p>
+    <p>A música do guia toca só no fone.</p>
+    <label class="vol" style="margin-bottom:12px"><input type="checkbox" id="semMic" style="flex:none;width:22px;height:22px"> <span><b>Som no computador</b> (fone Bluetooth): o celular grava só a imagem</span></label>
     <div class="linha">
       <button id="btnFrente">Câmera da frente</button>
       <button id="btnTras" class="sec">De trás</button>
@@ -223,11 +224,11 @@ async function ligarCam(fr){
     if(stream) stream.getTracks().forEach(t=>t.stop());
     stream = await navigator.mediaDevices.getUserMedia({
       video:{facingMode: fr?"user":"environment", width:{ideal:1920}, height:{ideal:1080}, frameRate:{ideal:30}},
-      audio:{echoCancellation:false, noiseSuppression:false, autoGainControl:false}
+      audio: $("semMic").checked ? false : {echoCancellation:false, noiseSuppression:false, autoGainControl:false}
     });
     const v=$("cam"); v.srcObject=stream; v.classList.toggle("espelho",fr); await v.play().catch(()=>{});
     const s=stream.getVideoTracks()[0].getSettings();
-    $("camInfo").innerHTML=`<span class="ok">Câmera e microfone ligados.</span>`+(s.width?` ${s.width}×${s.height}`:"");
+    $("camInfo").innerHTML=`<span class="ok">${$("semMic").checked?"Câmera ligada, microfone desligado.":"Câmera e microfone ligados."}</span>`+(s.width?` ${s.width}×${s.height}`:"");
   }catch(e){
     stream=null;
     $("camErro").textContent = e&&e.name==="NotAllowedError"
@@ -239,6 +240,7 @@ async function ligarCam(fr){
 }
 $("btnFrente").onclick=()=>ligarCam(true);
 $("btnTras").onclick=()=>ligarCam(false);
+$("semMic").onchange=()=>{ if(stream) ligarCam(frente); };
 function atualizaBotoes(){ $("btnGravar").disabled=!(arqBytes&&stream); $("btnEnsaiar").disabled=!arqBytes; }
 
 /* moldura 1080×920 (a metade de baixo do Reels) sobre a imagem da câmera */
@@ -312,7 +314,9 @@ async function terminar(chegouAoFim){
     $("fimTit").textContent = chegouAoFim ? "Gravado" : "Gravado (parou antes do fim)";
     $("fimTxt").innerHTML = `Salve e mande pro computador (LocalSend).<br><br>`+
       `<b>Na edição:</b> a sua palma fica perto de <b>${(atraso+DADOS.flash).toFixed(1).replace(".",",")} s</b> do vídeo. `+
-      `O quadro 0 da animação vai <b>7,2 s depois da palma</b>. Use a palma no som da câmera, que é exata; o número aqui é só pra achar rápido.`;
+      `O quadro 0 da animação vai <b>7,2 s depois da palma</b>. `+($("semMic").checked
+      ? `Este vídeo não tem som: case o quadro em que as mãos se encontram com a palma no áudio do condensador.`
+      : `Use a palma no som da câmera, que é exata; o número aqui é só pra achar rápido.`);
     $("btnSalvar").hidden=false;
   }else{
     $("fimTit").textContent = chegouAoFim ? "Fim do guia" : "Parou antes do fim";
